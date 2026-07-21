@@ -55,8 +55,11 @@ false content in your notes with nothing to flag it.
 - **Real metadata** — YAML frontmatter with title, URL, subtitle, author and publication date, read from meta tags *and* JSON-LD, where most modern platforms actually keep the date.
 - **Math becomes LaTeX** — KaTeX and MathJax render each expression twice (MathML plus a visual layer), which naive converters emit as duplicated soup. Markdownr pulls the original TeX: `$E=mc^2$`.
 - **Code keeps its language** — ` ```python `, not a bare fence, across highlight.js, Prism and GitHub markup. GFM tables always on.
+- **Cite in one click** — copy any captured source as **BibTeX** or **RIS**, built from the extracted metadata, ready for Zotero / Overleaf / Obsidian.
+- **Your own tags** — add Obsidian-style `tags:` to the frontmatter (nested `topic/subtopic` supported).
+- **Batch the whole session** — "All tabs" captures every open tab into one research document: a table of contents plus each source under its own heading and URL.
 - **Toggles** — images, links, YAML frontmatter, absolute URLs.
-- **Export** — copy, download `.md`, or "copy as prompt" (wrapped for pasting into an LLM).
+- **Export** — copy, download `.md`, or "copy as prompt" (wrapped for pasting into an LLM). A live character/token count tells you if it fits your context window.
 
 ## What the output looks like
 
@@ -128,6 +131,8 @@ Bug fixes land as a test case first. If you find a page that converts badly, the
 useful thing you can report.
 
 ## Privacy
+
+Full policy: [PRIVACY.md](PRIVACY.md).
 
 Conversion is 100% local. No analytics, no telemetry, no account, no server — the extension makes
 **zero network requests**, and `lib/privacy.test.ts` fails the build if `fetch`, `XMLHttpRequest`,
