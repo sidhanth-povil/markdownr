@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="440" height="280" viewBox="0 0 440 280" font-family="'Helvetica Neue',Helvetica,Arial,sans-serif">
+  <rect width="440" height="280" fill="#1a1a1a"/>
+  <g transform="translate(300 150) scale(5.2)" opacity="0.09">
+    <path d="M7.5 30V12L13.25 21L19 12V30" fill="none" stroke="#fb411f" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M32.5 11V30" fill="none" stroke="#fb411f" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="27.8" cy="25.3" r="4.7" fill="none" stroke="#fb411f" stroke-width="3.8"/>
+  </g>
+  <g transform="translate(40 58) scale(1.7)">
+    <rect width="40" height="40" rx="10" fill="#fb411f"/>
+    <path d="M7.5 30V12L13.25 21L19 12V30" fill="none" stroke="#fff" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M32.5 11V30" fill="none" stroke="#fff" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="27.8" cy="25.3" r="4.7" fill="none" stroke="#fff" stroke-width="3.8"/>
+  </g>
+  <text x="40" y="168" font-size="34" font-weight="800" letter-spacing="-1.4" fill="#ffffff">Markdownr</text>
+  <text x="42" y="202" font-size="16" fill="#9a9a96">Save any page as clean Markdown.</text>
+  <g transform="translate(42 236)" font-family="ui-monospace,Menlo,monospace" font-size="13" fill="#6f6f6b">
+    <rect x="0" y="-10" width="9" height="9" rx="2" fill="#fb411f"/><text x="16" y="0">100% local · zero tracking</text>
+  </g>
+</svg>
