@@ -166,6 +166,14 @@ isn't used.
   rows come out short. Definition lists (`<dl>`) flatten to paragraphs for the same reason.
 - **PDF tabs and `chrome://` pages** can't be converted — there's no page HTML to read.
 
+## Credits
+
+The idea of a one-click "page → Markdown" browser extension was inspired by
+[.MD this page](https://github.com/Ademking/MD-This-Page) by Adem Kouki. Markdownr is an
+independent implementation — a different extraction pipeline (Mozilla Readability + Turndown),
+a different popup-based architecture, and its own feature set — and shares no code with it. Thanks
+to that project for the concept.
+
 ## License
 
 MIT. Contributions welcome.
