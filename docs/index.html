@@ -3,260 +3,347 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Markdownr — Capture what an assistant can't fetch, as clean Markdown</title>
-<meta name="description" content="A browser extension that turns any page — including logged-in tools, localhost, and paywalled sources — into citation-ready Markdown. 100% local, zero tracking." />
-<meta property="og:title" content="Markdownr — page to clean Markdown" />
-<meta property="og:description" content="Capture pages a URL can't reach, as LLM-ready Markdown with citation-ready frontmatter. Open source, 100% local." />
+<title>Markdownr — Save any page as clean Markdown</title>
+<meta name="description" content="A browser extension that turns any page — even the ones locked to you, like paid subscriptions, internal tools, and localhost — into clean, citation-ready Markdown. Free, open source, 100% local." />
+<meta property="og:title" content="Markdownr — save any page as clean Markdown" />
+<meta property="og:description" content="Capture pages an AI can't open, as clean Markdown with source and citation details. Free, open source, nothing leaves your browser." />
+<link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <style>
-  :root {
-    --bg: #ffffff; --bg-soft: #f7f7fb; --fg: #0f1222; --muted: #5b6072;
-    --card: #ffffff; --border: #e7e8ef; --brand: #4f46e5; --brand-2: #7c3aed;
-    --accent: #0ea5a4; --code-key: #7c3aed; --code-str: #0e7490; --code-com: #94a3b8;
-    --shadow: 0 1px 2px rgba(16,18,34,.04), 0 12px 32px -12px rgba(16,18,34,.14);
-    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  :root{
+    --ink:#1e1e1e; --ink-2:#404040; --muted:#7c7c7c; --line:#ebebeb;
+    --bg:#f7f7f7; --card:#ffffff; --accent:#fb411f; --accent-ink:#ffffff;
+    --sans:'Inter',system-ui,-apple-system,sans-serif;
+    --mono:'DM Mono',ui-monospace,Menlo,monospace;
+    --maxw:1120px; --radius:16px;
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #08080c; --bg-soft: #0d0d14; --fg: #e9e9f2; --muted: #9295a8;
-      --card: #101018; --border: #22232e; --brand: #7c7bf0; --brand-2: #a78bfa;
-      --accent: #2dd4bf; --code-key: #c4b5fd; --code-str: #67e8f9; --code-com: #565a6e;
-      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 24px 48px -20px rgba(0,0,0,.7);
-    }
+  @media (prefers-color-scheme:dark){
+    :root{ --ink:#f0efec; --ink-2:#c7c6c2; --muted:#8f8e8a; --line:#262626;
+      --bg:#0f0f0f; --card:#161616; --accent:#fb411f; }
   }
-  * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-  body { margin: 0; background: var(--bg); color: var(--fg);
-    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
-  a { color: var(--brand); text-decoration: none; }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+  *{ box-sizing:border-box; }
+  html{ scroll-behavior:smooth; -webkit-text-size-adjust:100%; }
+  body{ margin:0; background:var(--bg); color:var(--ink); font-family:var(--sans);
+    font-size:17px; line-height:1.6; letter-spacing:-0.011em; -webkit-font-smoothing:antialiased; }
+  a{ color:inherit; text-decoration:none; }
+  .wrap{ max-width:var(--maxw); margin:0 auto; padding:0 28px; }
+  .mono{ font-family:var(--mono); }
+
+  /* type */
+  h1,h2,h3{ letter-spacing:-0.03em; line-height:1.04; margin:0; font-weight:700; }
+  h1{ font-size:clamp(42px,7vw,78px); font-weight:800; }
+  h2{ font-size:clamp(30px,4.4vw,46px); }
+  h3{ font-size:19px; letter-spacing:-0.02em; }
+  .kicker{ font-family:var(--mono); font-size:12.5px; font-weight:500; text-transform:uppercase;
+    letter-spacing:0.12em; color:var(--accent); margin:0 0 18px; }
+  .lede{ font-size:clamp(17px,2.1vw,21px); color:var(--ink-2); max-width:44ch; }
+  .muted{ color:var(--muted); }
+
+  /* buttons */
+  .btn{ display:inline-flex; align-items:center; gap:9px; height:50px; padding:0 24px; border-radius:999px;
+    font-weight:600; font-size:15.5px; border:1px solid transparent; cursor:pointer; transition:.16s ease; white-space:nowrap; }
+  .btn.primary{ background:var(--accent); color:var(--accent-ink); }
+  .btn.primary:hover{ transform:translateY(-1px); box-shadow:0 10px 26px -12px var(--accent); }
+  .btn.ghost{ background:transparent; color:var(--ink); border-color:color-mix(in srgb,var(--ink) 22%,transparent); }
+  .btn.ghost:hover{ border-color:var(--ink); }
+  .btn svg{ width:17px; height:17px; }
 
   /* header */
-  header { position: sticky; top: 0; z-index: 10; backdrop-filter: saturate(1.4) blur(10px);
-    background: color-mix(in srgb, var(--bg) 82%, transparent); border-bottom: 1px solid var(--border); }
-  .nav { display: flex; align-items: center; gap: 20px; height: 60px; }
-  .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; letter-spacing: -.01em; }
-  .glyph { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center;
-    color: #fff; font-weight: 800; font-size: 15px; background: linear-gradient(135deg, var(--brand), var(--brand-2)); }
-  .nav .spacer { flex: 1; }
-  .nav a.link { color: var(--muted); font-size: 14px; font-weight: 500; }
-  .nav a.link:hover { color: var(--fg); }
-  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 10px;
-    font-weight: 600; font-size: 14px; border: 1px solid var(--border); color: var(--fg); background: var(--card); transition: .15s; white-space: nowrap; }
-  .btn:hover { border-color: color-mix(in srgb, var(--brand) 40%, var(--border)); }
-  .btn.primary { color: #fff; border: 0; background: linear-gradient(135deg, var(--brand), var(--brand-2));
-    box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--brand) 70%, transparent); }
-  .btn.primary:hover { filter: brightness(1.06); }
-  @media (max-width: 680px){ .nav a.link { display: none; } }
+  header{ position:sticky; top:0; z-index:20; background:color-mix(in srgb,var(--bg) 84%,transparent);
+    backdrop-filter:saturate(1.6) blur(12px); border-bottom:1px solid var(--line); }
+  .nav{ display:flex; align-items:center; gap:28px; height:72px; }
+  .brand{ display:flex; align-items:center; gap:11px; font-weight:700; font-size:18px; letter-spacing:-0.02em; }
+  .brand svg{ width:30px; height:30px; border-radius:8px; }
+  .nav .grow{ flex:1; }
+  .nav .navlink{ font-size:15px; color:var(--muted); font-weight:500; }
+  .nav .navlink:hover{ color:var(--ink); }
+  .nav .btn{ height:42px; padding:0 18px; font-size:14.5px; }
+  @media(max-width:820px){ .nav .navlink{ display:none; } }
 
   /* hero */
-  .hero { display: grid; grid-template-columns: 1.05fr 1fr; gap: 48px; align-items: center; padding: 72px 0 40px; }
-  @media (max-width: 900px){ .hero { grid-template-columns: 1fr; gap: 36px; padding: 48px 0 24px; } }
-  .eyebrow { display: inline-flex; align-items: center; gap: 8px; font: 600 12.5px/1 var(--mono);
-    letter-spacing: .02em; color: var(--muted); text-transform: uppercase; margin-bottom: 18px; }
-  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent); }
-  h1 { font-size: clamp(34px, 5.4vw, 54px); line-height: 1.03; letter-spacing: -.03em; margin: 0 0 18px; font-weight: 800; }
-  h1 .grad { background: linear-gradient(120deg, var(--brand), var(--brand-2) 60%, var(--accent));
-    -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .lede { color: var(--muted); font-size: clamp(16px, 2.2vw, 19px); max-width: 40ch; margin: 0 0 26px; }
-  .cta { display: flex; gap: 12px; flex-wrap: wrap; }
-  .trust { margin-top: 18px; font: 500 13px/1.5 var(--mono); color: var(--muted); }
-  .trust b { color: var(--fg); font-weight: 600; }
+  .hero{ display:grid; grid-template-columns:1.05fr .95fr; gap:56px; align-items:center;
+    padding:clamp(56px,9vw,104px) 0 clamp(40px,6vw,72px); }
+  @media(max-width:920px){ .hero{ grid-template-columns:1fr; gap:44px; } }
+  .hero .cta{ display:flex; gap:14px; flex-wrap:wrap; margin-top:32px; }
+  .hero .fineprint{ margin-top:20px; font-family:var(--mono); font-size:13px; color:var(--muted); }
+  .hero .fineprint b{ color:var(--ink); font-weight:500; }
 
-  /* md window mockup */
-  .window { border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: var(--card); box-shadow: var(--shadow); }
-  .titlebar { display: flex; align-items: center; gap: 8px; padding: 11px 14px; border-bottom: 1px solid var(--border); background: var(--bg-soft); }
-  .traffic { width: 11px; height: 11px; border-radius: 50%; background: var(--border); }
-  .tab { margin-left: 8px; font: 600 12.5px/1 var(--mono); color: var(--muted); }
-  .tab .accent { color: var(--fg); }
-  pre.code { margin: 0; padding: 18px 18px 20px; font: 13px/1.7 var(--mono); overflow-x: auto; color: var(--fg); }
-  .k { color: var(--code-key); } .s { color: var(--code-str); } .c { color: var(--code-com); }
-  .rule { color: var(--muted); }
+  /* md window */
+  .window{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;
+    box-shadow:0 2px 4px rgba(0,0,0,.03),0 40px 80px -40px rgba(0,0,0,.28); }
+  .titlebar{ display:flex; align-items:center; gap:7px; padding:13px 16px; border-bottom:1px solid var(--line); background:var(--bg); }
+  .tl{ width:11px; height:11px; border-radius:50%; background:var(--line); }
+  .fname{ margin-left:10px; font-family:var(--mono); font-size:12.5px; color:var(--muted); }
+  .fname b{ color:var(--ink); font-weight:500; }
+  pre.code{ margin:0; padding:20px; font-family:var(--mono); font-size:13px; line-height:1.75; overflow-x:auto; }
+  .k{ color:var(--accent); } .s{ color:var(--ink-2); } .h{ color:var(--ink); font-weight:500; } .g{ color:var(--muted); }
 
   /* sections */
-  section { padding: 56px 0; border-top: 1px solid var(--border); }
-  .kicker { font: 600 12.5px/1 var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--accent); margin: 0 0 10px; }
-  h2 { font-size: clamp(24px, 3.4vw, 32px); letter-spacing: -.02em; margin: 0 0 8px; font-weight: 800; }
-  .sub { color: var(--muted); max-width: 56ch; margin: 0 0 28px; }
+  section{ padding:clamp(64px,10vw,120px) 0; }
+  section.alt{ background:var(--card); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+  .head{ max-width:60ch; margin-bottom:clamp(36px,5vw,56px); }
+  .head h2{ margin-bottom:16px; }
 
-  .reach { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
-  .reach div { border: 1px solid var(--border); border-radius: 12px; padding: 16px 16px; background: var(--card); }
-  .reach h3 { margin: 0 0 4px; font-size: 15px; }
-  .reach p { margin: 0; color: var(--muted); font-size: 13.5px; }
-  .reach .em { color: var(--brand); font: 700 12px/1 var(--mono); }
+  /* plain-language why */
+  .why{ display:grid; grid-template-columns:1fr 1fr; gap:clamp(28px,5vw,64px); align-items:start; }
+  @media(max-width:820px){ .why{ grid-template-columns:1fr; gap:28px; } }
+  .why p{ font-size:clamp(18px,2.2vw,22px); line-height:1.55; color:var(--ink-2); margin:0 0 18px; }
+  .why .accent{ color:var(--accent); font-weight:500; }
+  .why aside{ border-left:2px solid var(--accent); padding-left:22px; }
+  .why aside p{ font-size:16px; color:var(--muted); margin:0 0 14px; }
+  .why aside b{ color:var(--ink); font-weight:600; }
 
-  .compare { display: grid; gap: 12px; }
-  .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; align-items: stretch; }
-  @media (max-width: 760px){ .row { grid-template-columns: 1fr; } .row .head { display: none; } }
-  .cell { border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; font-size: 14px; background: var(--card); }
-  .cell.label { color: var(--muted); font-weight: 600; background: var(--bg-soft); }
-  .cell.bad { color: var(--muted); }
-  .cell.bad code, .cell.good code { font: 12.5px/1.5 var(--mono); background: transparent; padding: 0; }
-  .cell.bad code { color: #ef4444; }
-  .cell.good { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
-  .cell.good code { color: var(--accent); }
-  .row.head .cell { background: transparent; border: 0; padding: 0 14px 4px; font: 600 12px/1 var(--mono); text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  /* reach grid */
+  .grid3{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:1px; background:var(--line);
+    border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; }
+  .grid3 .cell{ background:var(--card); padding:28px 26px; }
+  .grid3 .num{ font-family:var(--mono); font-size:12.5px; color:var(--accent); }
+  .grid3 h3{ margin:14px 0 8px; }
+  .grid3 p{ margin:0; color:var(--muted); font-size:15px; }
 
-  .flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; counter-reset: step; }
-  .step { border: 1px solid var(--border); border-radius: 12px; padding: 18px; background: var(--card); position: relative; }
-  .step::before { counter-increment: step; content: counter(step); position: absolute; top: 16px; right: 16px;
-    font: 800 13px/1 var(--mono); color: #fff; width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center;
-    background: linear-gradient(135deg, var(--brand), var(--brand-2)); }
-  .step h3 { margin: 0 0 6px; font-size: 15px; padding-right: 30px; }
-  .step p { margin: 0; color: var(--muted); font-size: 13.5px; }
+  /* fidelity */
+  .cmp{ display:grid; gap:10px; }
+  .crow{ display:grid; grid-template-columns:1.1fr 1fr 1fr; gap:10px; }
+  @media(max-width:720px){ .crow{ grid-template-columns:1fr; } .crow.ch{ display:none; } }
+  .cbox{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:15px 18px; font-size:15px; }
+  .cbox.l{ font-weight:600; }
+  .cbox.bad{ color:var(--muted); }
+  .cbox.bad code,.cbox.good code{ font-family:var(--mono); font-size:12.5px; }
+  .cbox.bad code{ color:#e0492c; }
+  .cbox.good{ border-color:color-mix(in srgb,var(--accent) 40%,var(--line)); }
+  .cbox.good code{ color:var(--accent); }
+  .crow.ch .cbox{ background:transparent; border:0; padding:2px 18px; font-family:var(--mono);
+    font-size:11.5px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); }
 
-  .install { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media (max-width: 760px){ .install { grid-template-columns: 1fr; } }
-  .panel { border: 1px solid var(--border); border-radius: 12px; padding: 20px; background: var(--card); }
-  .panel h3 { margin: 0 0 10px; font-size: 16px; }
-  .panel pre { margin: 0; padding: 12px 14px; border-radius: 9px; background: var(--bg-soft); border: 1px solid var(--border);
-    font: 12.5px/1.7 var(--mono); overflow-x: auto; color: var(--fg); }
-  .panel ol { margin: 0; padding-left: 18px; color: var(--muted); font-size: 14px; }
-  .panel ol li { margin: 5px 0; }
+  /* steps */
+  .steps{ display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:20px; counter-reset:s; }
+  .stp{ position:relative; padding-top:20px; border-top:2px solid var(--ink); }
+  .stp .n{ font-family:var(--mono); font-size:13px; color:var(--accent); }
+  .stp h3{ margin:10px 0 8px; }
+  .stp p{ margin:0; color:var(--muted); font-size:15px; }
 
-  footer { border-top: 1px solid var(--border); padding: 36px 0 56px; color: var(--muted); font-size: 14px; }
-  .foot { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-  .foot .spacer { flex: 1; }
-  .foot a { color: var(--muted); } .foot a:hover { color: var(--fg); }
+  /* faq */
+  .faq{ max-width:820px; }
+  details{ border-bottom:1px solid var(--line); }
+  details summary{ list-style:none; cursor:pointer; padding:22px 0; display:flex; align-items:center; justify-content:space-between; gap:20px;
+    font-size:18px; font-weight:600; letter-spacing:-0.01em; }
+  details summary::-webkit-details-marker{ display:none; }
+  details summary .plus{ flex:none; width:22px; height:22px; position:relative; transition:.2s; }
+  details summary .plus::before,details summary .plus::after{ content:""; position:absolute; background:var(--accent); border-radius:2px; }
+  details summary .plus::before{ top:10px; left:2px; width:18px; height:2px; }
+  details summary .plus::after{ left:10px; top:2px; width:2px; height:18px; transition:.2s; }
+  details[open] summary .plus::after{ transform:rotate(90deg); opacity:0; }
+  details .a{ padding:0 0 24px; color:var(--muted); font-size:16px; max-width:70ch; }
+  details .a a{ color:var(--accent); }
+
+  /* install */
+  .install{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  @media(max-width:720px){ .install{ grid-template-columns:1fr; } }
+  .panel{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:28px; }
+  .panel h3{ margin:0 0 14px; }
+  .panel ol{ margin:0; padding-left:20px; color:var(--ink-2); font-size:15.5px; }
+  .panel ol li{ margin:8px 0; }
+  .panel code{ font-family:var(--mono); font-size:13px; background:var(--bg); padding:2px 6px; border-radius:5px; }
+  .panel pre{ margin:0; padding:16px; border-radius:10px; background:var(--bg); border:1px solid var(--line);
+    font-family:var(--mono); font-size:12.5px; line-height:1.75; overflow-x:auto; color:var(--ink); }
+  .panel .btn{ margin-top:18px; }
+
+  /* footer */
+  footer{ border-top:1px solid var(--line); padding:44px 0 60px; }
+  .foot{ display:flex; align-items:center; gap:22px; flex-wrap:wrap; }
+  .foot .grow{ flex:1; }
+  .foot a{ color:var(--muted); font-size:15px; } .foot a:hover{ color:var(--ink); }
+  .foot .brand{ font-size:16px; }
 </style>
 </head>
 <body>
 
 <header>
   <div class="wrap nav">
-    <span class="brand"><span class="glyph">M↓</span> Markdownr</span>
-    <span class="spacer"></span>
-    <a class="link" href="#reach">Why</a>
-    <a class="link" href="#fidelity">Fidelity</a>
-    <a class="link" href="#install">Install</a>
-    <a class="link" href="https://github.com/sidhanth-povil/markdownr">GitHub</a>
+    <a class="brand" href="#top">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#fb411f"/><path d="M16 7.5 V17.5 M11 13 l5 5 l5 -5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><rect x="10.5" y="22.5" width="11" height="2.4" rx="1.2" fill="#fff"/></svg>
+      Markdownr
+    </a>
+    <span class="grow"></span>
+    <a class="navlink" href="#why">Why it helps</a>
+    <a class="navlink" href="#fidelity">Fidelity</a>
+    <a class="navlink" href="#faq">FAQ</a>
+    <a class="navlink" href="https://github.com/sidhanth-povil/markdownr">GitHub</a>
     <a class="btn primary" href="#install">Get Markdownr</a>
   </div>
 </header>
 
-<main class="wrap">
+<main id="top">
 
   <!-- HERO -->
-  <div class="hero">
+  <div class="wrap hero">
     <div>
-      <span class="eyebrow"><span class="dot"></span> Browser extension · Open source · 100% local</span>
-      <h1>Capture what an assistant <span class="grad">can't fetch</span>, as clean Markdown.</h1>
-      <p class="lede">Paywalled journals, paid newsletters, logged-in tools, localhost — pages a URL can't reach. Markdownr runs in your browser, in your session, and hands back citation-ready Markdown.</p>
+      <p class="kicker">Browser extension · Free &amp; open source</p>
+      <h1>Save any page as clean Markdown.</h1>
+      <p class="lede" style="margin-top:22px">Even the pages an AI can't open for you — your paid subscriptions, your company's internal tools, a site running on your own computer. One click, and it's clean, structured text.</p>
       <div class="cta">
         <a class="btn primary" href="#install">Add to Chrome</a>
-        <a class="btn" href="https://github.com/sidhanth-povil/markdownr/releases/download/v0.1.0/markdownr-chrome-mv3-0.1.0.zip">↓ Download for your team</a>
+        <a class="btn ghost" href="https://github.com/sidhanth-povil/markdownr/releases/download/v0.1.0/markdownr-chrome-mv3-0.1.0.zip">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+          Download .zip
+        </a>
       </div>
-      <p class="trust">No account. No tracking. <b>Zero network requests</b> — enforced by a test.</p>
+      <p class="fineprint">No account. No tracking. <b>Nothing leaves your browser.</b></p>
     </div>
 
     <div class="window" aria-hidden="true">
       <div class="titlebar">
-        <span class="traffic"></span><span class="traffic"></span><span class="traffic"></span>
-        <span class="tab"><span class="accent">attention-is-all-you-need</span>.md</span>
+        <span class="tl"></span><span class="tl"></span><span class="tl"></span>
+        <span class="fname"><b>attention-is-all-you-need</b>.md</span>
       </div>
-<pre class="code"><span class="rule">---</span>
+<pre class="code"><span class="g">---</span>
 <span class="k">title</span>: <span class="s">"Attention Is All You Need"</span>
 <span class="k">url</span>: <span class="s">"https://arxiv.org/abs/1706.03762"</span>
 <span class="k">author</span>: <span class="s">"Vaswani, Ashish"</span>
 <span class="k">date</span>: <span class="s">"2017/06/12"</span>
 <span class="k">tags</span>: [research, ai/transformers]
-<span class="rule">---</span>
+<span class="g">---</span>
 
-<span class="c"># Attention Is All You Need</span>
+<span class="h"># Attention Is All You Need</span>
 
 The dominant sequence transduction models are
 based on complex recurrent or convolutional
-neural networks…
+neural networks in an encoder-decoder setup…
 
-<span class="c">## Model Architecture</span>
+<span class="h">## Model Architecture</span>
 
 Most competitive neural sequence models have
-an encoder-decoder structure. Here, the
-encoder maps an input sequence…</pre>
+an encoder-decoder structure…</pre>
     </div>
   </div>
 
+  <!-- WHY IT HELPS (plain language) -->
+  <section id="why" class="alt">
+    <div class="wrap">
+      <div class="head"><p class="kicker">Why it helps</p><h2>The simple version</h2></div>
+      <div class="why">
+        <div>
+          <p>Most "save as Markdown" tools only work on public pages — the kind an AI could already read on its own just from a link.</p>
+          <p>Markdownr is different. Because it runs <span class="accent">inside your browser</span>, it can save pages that are locked to you: a paid newsletter, a journal you're logged into, an internal wiki, or an app running on <span class="accent">localhost</span>.</p>
+          <p>It strips the menus, ads and popups, keeps the parts that matter — headings, code, math, tables — and remembers where it came from. Then you paste it straight into ChatGPT, Claude, Obsidian, or your notes.</p>
+        </div>
+        <aside>
+          <p><b>Feeding a page to an AI?</b> Paste clean Markdown instead of a messy copy — the model reads it far better, and you spend fewer tokens.</p>
+          <p><b>Doing research?</b> Every capture keeps the title, author, date and link, so your sources stay citable.</p>
+          <p><b>Care about privacy?</b> A hosted "reader" service sees every page you send it. Markdownr never sends anything anywhere.</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
   <!-- REACH -->
   <section id="reach">
-    <p class="kicker">Why an extension, not a URL</p>
-    <h2>For the pages a link can't open</h2>
-    <p class="sub">A public blog post? An assistant can just fetch it. Markdownr is for everything else — the sources that live behind a session.</p>
-    <div class="reach">
-      <div><span class="em">01</span><h3>Behind a login</h3><p>Paid newsletters, journals via SSO, private Notion. It sees what you see.</p></div>
-      <div><span class="em">02</span><h3>Localhost &amp; intranet</h3><p><code>localhost:3000</code>, staging, internal wikis and dashboards.</p></div>
-      <div><span class="em">03</span><h3>JavaScript-rendered</h3><p>Reads the live DOM after render, where URL fetchers get an empty shell.</p></div>
-      <div><span class="em">04</span><h3>Just a selection</h3><p>Highlight three paragraphs and convert only those. A URL can't do that.</p></div>
-      <div><span class="em">05</span><h3>Private by design</h3><p>Nothing leaves your machine. A hosted reader would see every page you read.</p></div>
+    <div class="wrap">
+      <div class="head"><p class="kicker">Where a link falls short</p><h2>For the pages a URL can't open</h2></div>
+      <div class="grid3">
+        <div class="cell"><span class="num">01</span><h3>Behind a login</h3><p>Paid newsletters, journals, private Notion. It sees exactly what you see.</p></div>
+        <div class="cell"><span class="num">02</span><h3>Localhost &amp; intranet</h3><p><code>localhost:3000</code>, staging sites, internal dashboards and wikis.</p></div>
+        <div class="cell"><span class="num">03</span><h3>Apps that render late</h3><p>Reads the live page after it loads, where link-fetchers get an empty shell.</p></div>
+        <div class="cell"><span class="num">04</span><h3>Just a selection</h3><p>Highlight a few paragraphs and capture only those.</p></div>
+        <div class="cell"><span class="num">05</span><h3>Private by design</h3><p>Zero network requests — checked automatically, so the promise can't quietly break.</p></div>
+        <div class="cell"><span class="num">06</span><h3>Every tab at once</h3><p>Fold a whole research session into one file with a table of contents.</p></div>
+      </div>
     </div>
   </section>
 
   <!-- FIDELITY -->
-  <section id="fidelity">
-    <p class="kicker">Gets the details right</p>
-    <h2>Where naive converters fall apart</h2>
-    <p class="sub">The things a knowledge worker actually needs intact — and what most tools do to them.</p>
-    <div class="compare">
-      <div class="row head">
-        <div class="cell">On the page</div><div class="cell">A naive converter</div><div class="cell">Markdownr</div>
-      </div>
-      <div class="row">
-        <div class="cell label">Math (KaTeX / MathJax)</div>
-        <div class="cell bad"><code>E\=mc2E=mc^2E\=mc2</code></div>
-        <div class="cell good"><code>$E=mc^2$</code></div>
-      </div>
-      <div class="row">
-        <div class="cell label">Fenced code block</div>
-        <div class="cell bad"><code>```</code> — language lost</div>
-        <div class="cell good"><code>```python</code> preserved</div>
-      </div>
-      <div class="row">
-        <div class="cell label">Page with hidden "related posts"</div>
-        <div class="cell bad">a different article, no error</div>
-        <div class="cell good">the one you're reading</div>
-      </div>
-      <div class="row">
-        <div class="cell label">Publish date</div>
-        <div class="cell bad">missing</div>
-        <div class="cell good">read from JSON-LD &amp; <code>citation_*</code></div>
+  <section id="fidelity" class="alt">
+    <div class="wrap">
+      <div class="head"><p class="kicker">Gets the details right</p><h2>Where other converters fall apart</h2>
+        <p class="muted" style="margin-top:10px">The things that matter most — and what most tools do to them.</p></div>
+      <div class="cmp">
+        <div class="crow ch"><div class="cbox">On the page</div><div class="cbox">Typical converter</div><div class="cbox">Markdownr</div></div>
+        <div class="crow"><div class="cbox l">Math (KaTeX / MathJax)</div><div class="cbox bad"><code>E\=mc2E=mc^2E\=mc2</code></div><div class="cbox good"><code>$E=mc^2$</code></div></div>
+        <div class="crow"><div class="cbox l">Code block</div><div class="cbox bad"><code>```</code> — language lost</div><div class="cbox good"><code>```python</code> kept</div></div>
+        <div class="crow"><div class="cbox l">Hidden "related posts"</div><div class="cbox bad">a different article, no warning</div><div class="cbox good">the one you're reading</div></div>
+        <div class="crow"><div class="cbox l">Publish date &amp; author</div><div class="cbox bad">missing</div><div class="cbox good">read from the page's metadata</div></div>
       </div>
     </div>
   </section>
 
   <!-- WORKFLOW -->
   <section id="workflow">
-    <p class="kicker">The research loop</p>
-    <h2>Capture → cite → collect</h2>
-    <p class="sub">Built for building a corpus you can think with — in an LLM, in Obsidian, in a lit review.</p>
-    <div class="flow">
-      <div class="step"><h3>Capture</h3><p>Reader, full page, or selection — with a live preview and a token count so you know it fits the context window.</p></div>
-      <div class="step"><h3>Attribute</h3><p>Title, author, date and source URL land in the frontmatter automatically. Add your own Obsidian tags.</p></div>
-      <div class="step"><h3>Cite</h3><p>One click copies the source as BibTeX or RIS — straight into Zotero, Overleaf, or your vault.</p></div>
-      <div class="step"><h3>Batch</h3><p>"All tabs" folds an entire research session into one document: a table of contents plus every source.</p></div>
+    <div class="wrap">
+      <div class="head"><p class="kicker">The research loop</p><h2>Capture, cite, collect</h2></div>
+      <div class="steps">
+        <div class="stp"><div class="n">01</div><h3>Capture</h3><p>Reader, full page, or selection — with a live preview and a token count.</p></div>
+        <div class="stp"><div class="n">02</div><h3>Attribute</h3><p>Title, author, date and URL fill the frontmatter. Add your own tags.</p></div>
+        <div class="stp"><div class="n">03</div><h3>Cite</h3><p>One click copies the source as BibTeX or RIS for Zotero or your vault.</p></div>
+        <div class="stp"><div class="n">04</div><h3>Collect</h3><p>"All tabs" gathers a whole session into one organised document.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="alt">
+    <div class="wrap">
+      <div class="head"><p class="kicker">Questions</p><h2>Good to know</h2></div>
+      <div class="faq">
+        <details open>
+          <summary>Is it free?<span class="plus"></span></summary>
+          <div class="a">Yes — completely free and open source under the MIT license. No paid tier, no upsell.</div>
+        </details>
+        <details>
+          <summary>Do you collect any of my data?<span class="plus"></span></summary>
+          <div class="a">No. Conversion happens entirely on your device and the extension makes <b>zero network requests</b> — no analytics, no accounts, no servers. An automated test fails the build if a network call is ever added, so the promise stays true.</div>
+        </details>
+        <details>
+          <summary>Does it work on paywalled or logged-in pages?<span class="plus"></span></summary>
+          <div class="a">Yes. It reads the page you're already looking at, in your own browser session — so anything you can see on screen, it can save. That's the whole point: it reaches pages a link-based tool never could.</div>
+        </details>
+        <details>
+          <summary>Which browsers does it support?<span class="plus"></span></summary>
+          <div class="a">Chrome and other Chromium browsers — Edge, Brave, Arc. A Firefox build is planned.</div>
+        </details>
+        <details>
+          <summary>Do I need an account or sign-in?<span class="plus"></span></summary>
+          <div class="a">No account, no sign-in, no email. Install it and it works.</div>
+        </details>
+        <details>
+          <summary>Where does my captured text go?<span class="plus"></span></summary>
+          <div class="a">Wherever you choose — your clipboard, a downloaded <code>.md</code> file, or a combined file when you capture several tabs. Never to a server.</div>
+        </details>
+        <details>
+          <summary>How do I install it right now?<span class="plus"></span></summary>
+          <div class="a">Download the <a href="https://github.com/sidhanth-povil/markdownr/releases/latest">release zip</a>, unzip it, open <code>chrome://extensions</code>, turn on Developer mode, and click "Load unpacked." The Chrome Web Store listing is coming soon.</div>
+        </details>
+      </div>
     </div>
   </section>
 
   <!-- INSTALL -->
   <section id="install">
-    <p class="kicker">Install</p>
-    <h2>Two minutes, no account</h2>
-    <p class="sub">Chrome Web Store listing coming soon. In the meantime, grab the build or run from source.</p>
-    <div class="install">
-      <div class="panel">
-        <h3>From the release build</h3>
-        <ol>
-          <li>Download the <a href="https://github.com/sidhanth-povil/markdownr/releases/latest">latest release zip</a> and unzip it.</li>
-          <li>Open <code>chrome://extensions</code> and turn on <strong>Developer mode</strong>.</li>
-          <li>Click <strong>Load unpacked</strong> and pick the unzipped folder.</li>
-        </ol>
-      </div>
-      <div class="panel">
-        <h3>From source</h3>
+    <div class="wrap">
+      <div class="head"><p class="kicker">Install</p><h2>Two minutes, no account</h2></div>
+      <div class="install">
+        <div class="panel">
+          <h3>From the release build</h3>
+          <ol>
+            <li>Download and unzip the release build.</li>
+            <li>Open <code>chrome://extensions</code> and turn on <strong>Developer mode</strong>.</li>
+            <li>Click <strong>Load unpacked</strong> and choose the unzipped folder.</li>
+          </ol>
+          <a class="btn primary" href="https://github.com/sidhanth-povil/markdownr/releases/download/v0.1.0/markdownr-chrome-mv3-0.1.0.zip">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+            Download .zip
+          </a>
+        </div>
+        <div class="panel">
+          <h3>From source</h3>
 <pre>git clone https://github.com/sidhanth-povil/markdownr
 cd markdownr
 npm install
 npm run build
 # chrome://extensions → Developer mode
 # → Load unpacked → build/chrome-mv3-prod</pre>
+        </div>
       </div>
     </div>
   </section>
@@ -265,12 +352,15 @@ npm run build
 
 <footer>
   <div class="wrap foot">
-    <span class="brand"><span class="glyph">M↓</span> Markdownr</span>
-    <span class="spacer"></span>
+    <a class="brand" href="#top">
+      <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#fb411f"/><path d="M16 7.5 V17.5 M11 13 l5 5 l5 -5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><rect x="10.5" y="22.5" width="11" height="2.4" rx="1.2" fill="#fff"/></svg>
+      Markdownr
+    </a>
+    <span class="grow"></span>
     <a href="https://github.com/sidhanth-povil/markdownr">GitHub</a>
     <a href="https://github.com/sidhanth-povil/markdownr/releases/latest">Releases</a>
     <a href="./privacy.html">Privacy</a>
-    <span>· MIT licensed</span>
+    <span class="muted" style="font-size:14px">MIT licensed</span>
   </div>
 </footer>
 
