@@ -62,7 +62,4 @@ would send data off your device would require a new, clearly disclosed policy.
 
 ## Contact
 
-Questions about privacy: **[your-contact-email]**
-
-<!-- Replace [your-contact-email] before publishing. Use an address you're willing
-to make public — the Chrome Web Store displays the developer contact email. -->
+Questions about privacy: **anil35612@gmail.com**
