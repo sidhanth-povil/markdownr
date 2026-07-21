@@ -163,7 +163,12 @@ export default function Popup() {
     <div className="w-[420px] bg-white text-gray-900 dark:bg-neutral-900 dark:text-neutral-100">
       <div className="flex items-center justify-between px-4 pt-3 pb-2">
         <div className="flex items-center gap-2">
-          <div className="h-5 w-5 rounded bg-indigo-600" />
+          <svg className="h-5 w-5" viewBox="0 0 40 40" aria-hidden="true">
+            <rect width="40" height="40" rx="10" fill="#fb411f" />
+            <path d="M7.5 30V12L13.25 21L19 12V30" fill="none" stroke="#fff" strokeWidth="3.8" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M32.5 11V30" fill="none" stroke="#fff" strokeWidth="3.8" strokeLinecap="round" strokeLinejoin="round" />
+            <circle cx="27.8" cy="25.3" r="4.7" fill="none" stroke="#fff" strokeWidth="3.8" />
+          </svg>
           <span className="font-semibold">Markdownr</span>
         </div>
         <span className="text-xs text-gray-400">Alt+M</span>
@@ -180,7 +185,7 @@ export default function Popup() {
             onClick={() => set("mode", m.id)}
             className={`flex-1 rounded-md px-2 py-1.5 text-sm transition ${
               options.mode === m.id
-                ? "bg-indigo-600 text-white"
+                ? "bg-[#fb411f] text-white"
                 : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
             }`}>
             {m.label}
@@ -205,7 +210,7 @@ export default function Popup() {
           disabled={!options.frontmatter}
           placeholder={options.frontmatter ? "Tags: research, ai/transformers" : "Enable Frontmatter to add tags"}
           aria-label="Frontmatter tags, comma-separated"
-          className="w-full rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs text-gray-800 outline-none placeholder:text-gray-400 focus:border-indigo-400 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
+          className="w-full rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs text-gray-800 outline-none placeholder:text-gray-400 focus:border-[#fb411f] disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
         />
       </div>
 
@@ -251,14 +256,14 @@ export default function Popup() {
           type="button"
           disabled={!canExport || !meta}
           onClick={() => meta && copy(toBibTeX(meta), "bibtex")}
-          className="underline underline-offset-2 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:no-underline">
+          className="underline underline-offset-2 hover:text-[#fb411f] disabled:cursor-not-allowed disabled:opacity-40 disabled:no-underline">
           {copied === "bibtex" ? "Copied ✓" : "BibTeX"}
         </button>
         <button
           type="button"
           disabled={!canExport || !meta}
           onClick={() => meta && copy(toRIS(meta), "ris")}
-          className="underline underline-offset-2 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:no-underline">
+          className="underline underline-offset-2 hover:text-[#fb411f] disabled:cursor-not-allowed disabled:opacity-40 disabled:no-underline">
           {copied === "ris" ? "Copied ✓" : "RIS"}
         </button>
       </div>
@@ -270,14 +275,14 @@ export default function Popup() {
           type="button"
           disabled={batching}
           onClick={() => captureAllTabs("copy")}
-          className="underline underline-offset-2 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-40">
+          className="underline underline-offset-2 hover:text-[#fb411f] disabled:cursor-not-allowed disabled:opacity-40">
           Copy
         </button>
         <button
           type="button"
           disabled={batching}
           onClick={() => captureAllTabs("download")}
-          className="underline underline-offset-2 hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-40">
+          className="underline underline-offset-2 hover:text-[#fb411f] disabled:cursor-not-allowed disabled:opacity-40">
           Download
         </button>
         {batchStatus && <span className="text-gray-400 dark:text-neutral-500">{batchStatus}</span>}
@@ -289,7 +294,7 @@ export default function Popup() {
 function Toggle({ label, v, on }: { label: string; v: boolean; on: (v: boolean) => void }) {
   return (
     <label className="flex cursor-pointer items-center gap-1.5 select-none">
-      <input type="checkbox" checked={v} onChange={(e) => on(e.target.checked)} className="accent-indigo-600" />
+      <input type="checkbox" checked={v} onChange={(e) => on(e.target.checked)} className="accent-[#fb411f]" />
       <span>{label}</span>
     </label>
   )
@@ -313,7 +318,7 @@ function Action({
       onClick={onClick}
       className={`rounded-md px-2 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${
         primary
-          ? "bg-indigo-600 text-white hover:bg-indigo-700"
+          ? "bg-[#fb411f] text-white hover:bg-[#e23c1c]"
           : "bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700"
       }`}>
       {children}
