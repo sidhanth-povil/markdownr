@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" role="img" aria-label="Markdownr — save any page as clean Markdown">
+  <rect width="1280" height="320" fill="#1a1a1a"/>
+
+  <!-- oversized watermark mark bleeding off the right -->
+  <g transform="translate(915 -34) scale(8.4)" opacity="0.10">
+    <path d="M7.5 30V12L13.25 21L19 12V30" fill="none" stroke="#fb411f" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M32.5 11V30" fill="none" stroke="#fb411f" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="27.8" cy="25.3" r="4.7" fill="none" stroke="#fb411f" stroke-width="3.8"/>
+  </g>
+
+  <!-- logo tile -->
+  <g transform="translate(84 112) scale(2.3)">
+    <rect width="40" height="40" rx="10" fill="#fb411f"/>
+    <path d="M7.5 30V12L13.25 21L19 12V30" fill="none" stroke="#fff" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M32.5 11V30" fill="none" stroke="#fff" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="27.8" cy="25.3" r="4.7" fill="none" stroke="#fff" stroke-width="3.8"/>
+  </g>
+
+  <!-- wordmark + tagline -->
+  <text x="196" y="158" font-family="'Helvetica Neue',Helvetica,Arial,sans-serif" font-size="60" font-weight="800" letter-spacing="-2" fill="#ffffff">Markdownr</text>
+  <text x="199" y="200" font-family="'Helvetica Neue',Helvetica,Arial,sans-serif" font-size="22" font-weight="400" letter-spacing="0" fill="#9a9a96">Save any page as clean Markdown — even the ones an AI can't open.</text>
+
+  <!-- accent pips echoing the frontmatter idea -->
+  <g transform="translate(199 226)" font-family="ui-monospace,Menlo,monospace" font-size="14" fill="#6f6f6b">
+    <rect x="0" y="0" width="9" height="9" rx="2" fill="#fb411f"/>
+    <text x="17" y="9">100% local</text>
+    <rect x="120" y="0" width="9" height="9" rx="2" fill="#fb411f"/>
+    <text x="137" y="9">zero tracking</text>
+    <rect x="262" y="0" width="9" height="9" rx="2" fill="#fb411f"/>
+    <text x="279" y="9">open source</text>
+  </g>
+</svg>

@@ -1,4 +1,21 @@
-# Markdownr — Page to Markdown
+<p align="center">
+  <img src="docs/banner.png" alt="Markdownr — save any page as clean Markdown" width="100%" />
+</p>
+
+<p align="center">
+  <a href="https://github.com/sidhanth-povil/markdownr/releases/latest"><img src="https://img.shields.io/github/v/release/sidhanth-povil/markdownr?color=fb411f&label=release" alt="Latest release" /></a>
+  <img src="https://img.shields.io/badge/license-MIT-1e1e1e" alt="MIT license" />
+  <img src="https://img.shields.io/badge/network_requests-zero-fb411f" alt="Zero network requests" />
+  <img src="https://img.shields.io/badge/built_with-Plasmo-1e1e1e" alt="Built with Plasmo" />
+</p>
+
+<p align="center">
+  <a href="https://sidhanth-povil.github.io/markdownr/"><b>Website</b></a> ·
+  <a href="https://github.com/sidhanth-povil/markdownr/releases/download/v0.1.0/markdownr-chrome-mv3-0.1.0.zip"><b>Download&nbsp;.zip</b></a> ·
+  <a href="https://sidhanth-povil.github.io/markdownr/privacy.html"><b>Privacy</b></a>
+</p>
+
+---
 
 Build a research corpus from sources an assistant **can't** reach — a paid newsletter, a paywalled
 journal, your logged-in library database, a private Notion — captured as clean, citation-ready
@@ -6,6 +23,8 @@ Markdown with author, publication date, and source URL in the frontmatter.
 
 Reader, full-page, or selection — with a live preview, and a character/token count so you know it
 fits the context window before you paste.
+
+> **Install now:** [download the latest build](https://github.com/sidhanth-povil/markdownr/releases/latest), unzip it, then open `chrome://extensions` → **Developer mode** → **Load unpacked** → pick the folder. Chrome Web Store listing coming soon.
 
 ## Why not just paste the URL?
 
