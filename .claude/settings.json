@@ -1,0 +1,31 @@
+{
+  "enabledPlugins": {
+    "ponytail@ponytail": true
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/mark-dirty.sh\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/run-guard.sh\"",
+            "timeout": 120,
+            "statusMessage": "Guard: running extraction + privacy suite"
+          }
+        ]
+      }
+    ]
+  }
+}

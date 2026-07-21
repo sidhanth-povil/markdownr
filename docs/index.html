@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Markdownr — Turn any webpage into clean Markdown</title>
+<meta name="description" content="One-click, LLM-ready Markdown from any webpage. Reader, full-page, or selection. Open source, private, local." />
+<style>
+  :root {
+    --bg: #ffffff; --fg: #171717; --muted: #6b7280;
+    --card: #f6f7f9; --border: #e5e7eb; --brand: #4f46e5; --brand-fg: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0b0b0f; --fg: #ededf0; --muted: #9ca3af; --card: #16161c; --border: #26262e; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    background: var(--bg); color: var(--fg); -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 20px; }
+  header { text-align: center; padding: 72px 0 48px; }
+  .logo { width: 56px; height: 56px; border-radius: 14px; background: var(--brand);
+    display: inline-flex; align-items: center; justify-content: center; color: #fff;
+    font-weight: 800; font-size: 26px; margin-bottom: 20px; }
+  h1 { font-size: clamp(28px, 6vw, 44px); line-height: 1.1; margin: 0 0 12px; letter-spacing: -0.02em; }
+  .sub { color: var(--muted); font-size: clamp(16px, 3vw, 20px); max-width: 620px; margin: 0 auto 28px; }
+  .btns { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn { display: inline-block; padding: 12px 22px; border-radius: 10px; font-weight: 600;
+    text-decoration: none; border: 1px solid var(--border); color: var(--fg); }
+  .btn.primary { background: var(--brand); color: var(--brand-fg); border-color: var(--brand); }
+  section { padding: 40px 0; border-top: 1px solid var(--border); }
+  h2 { font-size: 24px; margin: 0 0 24px; letter-spacing: -0.01em; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+  .card h3 { margin: 0 0 6px; font-size: 16px; }
+  .card p { margin: 0; color: var(--muted); font-size: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  td:first-child { color: var(--muted); }
+  code { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 2px 6px; font-size: 13px; }
+  pre { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; overflow-x: auto; }
+  footer { text-align: center; color: var(--muted); font-size: 14px; padding: 40px 0 60px; }
+  a { color: var(--brand); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">M↓</div>
+    <h1>Capture what an assistant can't fetch — as clean Markdown.</h1>
+    <p class="sub">Paywalled journals, paid newsletters, logged-in tools, localhost — pages a URL can't reach. Citation-ready frontmatter, math as LaTeX, code with its language. Open source, 100% local, no tracking.</p>
+    <div class="btns">
+      <a class="btn primary" href="#install">Add to Chrome</a>
+      <a class="btn" href="https://github.com/OWNER/markdownr">View on GitHub</a>
+    </div>
+  </header>
+
+  <section>
+    <h2>What it does</h2>
+    <div class="grid">
+      <div class="card"><h3>Reaches pages a URL can't</h3><p>Runs in your browser, in your session — so it captures logged-in pages, localhost, and intranet tools an assistant simply can't fetch.</p></div>
+      <div class="card"><h3>Citation-ready frontmatter</h3><p>Title, author, publication date and source URL — read from meta tags, JSON-LD, and academic <code>citation_*</code> tags.</p></div>
+      <div class="card"><h3>Math and code, intact</h3><p>KaTeX/MathJax become real <code>$LaTeX$</code> instead of duplicated soup; code blocks keep their language.</p></div>
+      <div class="card"><h3>Cite &amp; tag</h3><p>Copy any source as BibTeX or RIS, and add your own Obsidian-style tags to the frontmatter.</p></div>
+      <div class="card"><h3>Batch a whole session</h3><p>Capture every open tab into one research document — a table of contents plus each source with its URL.</p></div>
+      <div class="card"><h3>Private by design</h3><p>Conversion runs entirely in your browser. Zero network requests — enforced by an automated test.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Gets the details right</h2>
+    <table>
+      <tr><td>Math (KaTeX/MathJax)</td><td>Real <code>$E=mc^2$</code>, not the renderer's duplicated markup.</td></tr>
+      <tr><td>Code blocks</td><td>Language preserved — <code>```python</code>, not a bare fence.</td></tr>
+      <tr><td>Hidden "related posts"</td><td>Never returns a different article by mistake — captures what you're actually reading.</td></tr>
+      <tr><td>Cookie banners &amp; page builders</td><td>Consent junk stripped before parsing; auto fallback when reader mode grabs too little.</td></tr>
+    </table>
+  </section>
+
+  <section id="install">
+    <h2>Install</h2>
+    <p><strong>Chrome Web Store:</strong> link coming once published.</p>
+    <p><strong>From source:</strong></p>
+    <pre>npm install
+npm run build
+# chrome://extensions → Developer mode → Load unpacked → build/chrome-mv3-prod</pre>
+  </section>
+
+  <footer>
+    Open source under MIT · <a href="https://github.com/OWNER/markdownr">GitHub</a> · <a href="./privacy.html">Privacy Policy</a>
+  </footer>
+</div>
+</body>
+</html>

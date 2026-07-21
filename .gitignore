@@ -1,0 +1,10 @@
+node_modules/
+build/
+.plasmo/
+*.zip
+.env*
+.DS_Store
+tsconfig.tsbuildinfo
+.claude/.needs-test
+.claude/session-reads.txt
+.claude/settings.local.json

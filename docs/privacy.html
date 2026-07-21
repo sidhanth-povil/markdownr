@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Privacy Policy — Markdownr</title>
+<meta name="description" content="Markdownr collects nothing, sends nothing, and stores nothing on any server. All conversion happens locally in your browser." />
+<style>
+  :root {
+    --bg: #ffffff; --fg: #171717; --muted: #6b7280;
+    --card: #f6f7f9; --border: #e5e7eb; --brand: #4f46e5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0b0b0f; --fg: #ededf0; --muted: #9ca3af; --card: #16161c; --border: #26262e; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.65 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    background: var(--bg); color: var(--fg); -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 20px; }
+  header { padding: 56px 0 24px; }
+  .logo { width: 48px; height: 48px; border-radius: 12px; background: var(--brand);
+    display: inline-flex; align-items: center; justify-content: center; color: #fff;
+    font-weight: 800; font-size: 22px; margin-bottom: 20px; }
+  h1 { font-size: clamp(26px, 5vw, 36px); line-height: 1.15; margin: 0 0 6px; letter-spacing: -0.02em; }
+  .updated { color: var(--muted); font-size: 14px; margin: 0 0 8px; }
+  .lede { font-size: 18px; background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 18px; margin: 20px 0 8px; }
+  h2 { font-size: 20px; margin: 36px 0 8px; letter-spacing: -0.01em; }
+  p, li { color: var(--fg); }
+  .muted { color: var(--muted); }
+  ul { padding-left: 20px; }
+  li { margin: 6px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; margin-top: 8px; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  td:first-child { color: var(--muted); white-space: nowrap; }
+  code { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 2px 6px; font-size: 13px; }
+  a { color: var(--brand); }
+  footer { color: var(--muted); font-size: 14px; padding: 40px 0 60px; border-top: 1px solid var(--border); margin-top: 48px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">M↓</div>
+    <h1>Privacy Policy — Markdownr</h1>
+    <p class="updated">Last updated: 21 July 2026</p>
+  </header>
+
+  <p class="lede"><strong>Markdownr collects nothing, sends nothing, and stores nothing on any
+  server. All conversion happens locally in your browser.</strong></p>
+
+  <p class="muted">Markdownr ("the extension") converts web pages into Markdown. This policy
+  explains exactly what it accesses and what happens to that data.</p>
+
+  <h2>What the extension accesses</h2>
+  <ul>
+    <li><strong>The content of a page you choose to convert.</strong> Only when you invoke the
+    extension — clicking the toolbar icon, pressing <code>Alt+M</code>, or using the right-click
+    "Copy page as Markdown" menu — does it read the current page's HTML to convert it. It does not
+    read pages in the background and does not monitor your browsing.</li>
+  </ul>
+
+  <h2>What happens to that content</h2>
+  <ul>
+    <li>It is converted to Markdown <strong>entirely on your device</strong>, inside your browser.</li>
+    <li>The result goes only where you ask: your <strong>clipboard</strong>, a downloaded
+    <strong><code>.md</code> file</strong>, or the extension's preview.</li>
+    <li>The page content is <strong>never transmitted anywhere.</strong> The extension makes
+    <strong>zero network requests</strong> — no analytics, no telemetry, no external servers, no
+    third parties. This is enforced by an automated test in the source code that fails the build if
+    any network call is ever introduced.</li>
+  </ul>
+
+  <h2>What the extension stores</h2>
+  <ul>
+    <li><strong>Your settings only</strong> — capture mode, toggles, and any tags you enter — saved
+    with the browser's built-in <code>storage.sync</code>. This stays in your browser and, if you
+    have browser sync on, syncs through your own browser account. It is <strong>never sent to the
+    developer</strong> or anyone else.</li>
+    <li>No page content, no browsing history, and no personal information is stored.</li>
+  </ul>
+
+  <h2>Accounts, tracking, and third parties</h2>
+  <ul>
+    <li>There are <strong>no accounts</strong> and no login.</li>
+    <li>There is <strong>no tracking, advertising, or profiling</strong> of any kind.</li>
+    <li><strong>No data is shared with or sold to any third party</strong>, because none is
+    collected in the first place.</li>
+  </ul>
+
+  <h2>Permissions and why they are needed</h2>
+  <table>
+    <tr><td>Current tab / page content</td><td>To read the page you choose to convert</td></tr>
+    <tr><td><code>storage</code></td><td>To remember your settings and tags in your browser</td></tr>
+    <tr><td><code>contextMenus</code></td><td>To provide the right-click "Copy page as Markdown" option</td></tr>
+    <tr><td><code>notifications</code></td><td>To confirm a copy succeeded when using the right-click menu</td></tr>
+  </table>
+  <p class="muted">Nothing is requested that is not used, and none of these permissions are used to
+  collect or transmit your data.</p>
+
+  <h2>Changes to this policy</h2>
+  <p>If this policy changes, the "Last updated" date above will change. Because the extension's
+  design is "everything stays on your device," any future version that would send data off your
+  device would require a new, clearly disclosed policy.</p>
+
+  <h2>Contact</h2>
+  <p>Questions about privacy: <strong>[your-contact-email]</strong></p>
+
+  <footer>
+    Markdownr is open source under the MIT license. This policy reflects the behavior of the
+    published extension.
+  </footer>
+</div>
+</body>
+</html>

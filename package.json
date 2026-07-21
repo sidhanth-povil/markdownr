@@ -1,0 +1,53 @@
+{
+  "name": "markdownr",
+  "displayName": "Markdownr — Page to Markdown",
+  "version": "0.1.0",
+  "description": "Turn any webpage into clean, LLM-ready Markdown in one click. Reader, full-page, or selection.",
+  "author": "Markdownr contributors",
+  "license": "MIT",
+  "scripts": {
+    "dev": "plasmo dev",
+    "build": "plasmo build",
+    "package": "plasmo package",
+    "test": "tsx lib/convert.test.ts && tsx lib/extract.test.ts && tsx lib/cite.test.ts && tsx lib/batch.test.ts && tsx lib/privacy.test.ts"
+  },
+  "dependencies": {
+    "@mozilla/readability": "0.5.0",
+    "plasmo": "0.90.5",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "turndown": "7.2.0",
+    "turndown-plugin-gfm": "1.0.2"
+  },
+  "devDependencies": {
+    "@types/chrome": "0.0.268",
+    "@types/jsdom": "^21.1.6",
+    "@types/node": "20.11.30",
+    "@types/react": "18.2.67",
+    "@types/react-dom": "18.2.22",
+    "@types/turndown": "5.0.4",
+    "autoprefixer": "10.4.19",
+    "jsdom": "^24.0.0",
+    "postcss": "8.4.38",
+    "tailwindcss": "3.4.3",
+    "tsx": "4.7.1",
+    "typescript": "5.4.3"
+  },
+  "manifest": {
+    "name": "Markdownr — Page to Markdown",
+    "permissions": [
+      "contextMenus",
+      "storage",
+      "notifications",
+      "activeTab"
+    ],
+    "commands": {
+      "_execute_action": {
+        "suggested_key": {
+          "default": "Alt+M"
+        },
+        "description": "Open Markdownr"
+      }
+    }
+  }
+}
