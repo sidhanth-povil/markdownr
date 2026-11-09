@@ -4,7 +4,7 @@
 // so the claim stays true by construction instead of by good intentions.
 // Run: npm test
 import assert from "node:assert"
-import { readdirSync, readFileSync, statSync } from "node:fs"
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs"
 import { dirname, extname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -65,5 +65,10 @@ const perms: string[] = pkg.manifest?.permissions ?? []
 const REMOTE_PERMS = ["webRequest", "proxy", "declarativeNetRequest"]
 const flagged = perms.filter((p) => REMOTE_PERMS.includes(p))
 assert.deepEqual(flagged, [], `unexpected network-capable permission: ${flagged.join(", ")}`)
+
+// Site access is on-demand. Broad access may only ever be optional, requested by "All tabs".
+assert.equal(pkg.manifest?.host_permissions, undefined, "no install-time host permissions")
+assert.ok(!existsSync(join(ROOT, "content.ts")), "root content.ts would make Plasmo register an always-on content script")
+assert.ok(!existsSync(join(ROOT, "contents")), "contents/ would make Plasmo register an always-on content script")
 
 console.log(`ok: privacy check passed — ${files.length} source files, zero network calls`)

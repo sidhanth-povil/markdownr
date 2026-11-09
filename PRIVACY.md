@@ -1,6 +1,6 @@
 # Privacy Policy — Markdownr
 
-**Last updated: 2026-07-21**
+**Last updated: 2026-11-09**
 
 Markdownr ("the extension") converts web pages into Markdown. This policy explains
 exactly what it accesses and what happens to that data. The short version:
@@ -46,10 +46,13 @@ All conversion happens locally in your browser.**
 
 | Permission | Why |
 |---|---|
-| Access to the current tab / page content | To read the page you choose to convert |
+| Access to the current tab (`activeTab`, `scripting`) | To read the page you choose to convert, only when you ask |
 | `storage` | To remember your settings and tags in your browser |
 | `contextMenus` | To provide the right-click "Copy page as Markdown" option |
 | `notifications` | To confirm a copy succeeded when using the right-click menu |
+| Optional: access to all sites | Requested only if you use "All tabs", which reads every open tab in the window |
+
+PDF files you choose to convert are read in your browser and never uploaded.
 
 Nothing is requested that is not used, and none of these permissions are used to
 collect or transmit your data.

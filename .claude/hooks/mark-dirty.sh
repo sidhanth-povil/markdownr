@@ -5,7 +5,7 @@
 input=$(cat)
 file=$(printf '%s' "$input" | python3 -c "import sys,json;print(json.load(sys.stdin).get('tool_input',{}).get('file_path',''))" 2>/dev/null)
 case "$file" in
-  *lib/*.ts|*content.ts|*background.ts|*popup.tsx|*package.json)
+  *lib/*.ts|*lib/*.tsx|*tabs/*.tsx|*background.ts|*popup.tsx|*package.json)
     touch "$CLAUDE_PROJECT_DIR/.claude/.needs-test"
     ;;
 esac

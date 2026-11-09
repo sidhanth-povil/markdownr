@@ -1,6 +1,7 @@
 // Runnable check for the multi-tab combiner. Run: npm test
 import assert from "node:assert"
 import { combineTabs, type TabCapture } from "./batch"
+import { applyTags } from "./frontmatter"
 
 const caps: TabCapture[] = [
   { meta: { title: "Attention Is All You Need", url: "https://arxiv.org/abs/1706.03762" }, markdown: "# Attention\n\nThe Transformer." },
@@ -35,5 +36,20 @@ assert.ok(doc.indexOf("## 1.") < doc.indexOf("## 2.") && doc.indexOf("## 2.") < 
 const one = combineTabs([caps[0]])
 assert.match(one, /^# Captured sources \(1\) —/, "single-tab header")
 assert.match(one, /## 1\. Attention Is All You Need/, "single-tab section")
+
+// each source keeps its provenance, not just a URL
+{
+  const doc2 = combineTabs([
+    { meta: { title: "Paper", url: "https://a.example/", author: "Doe, Jane", date: "2020-01-01", doi: "10.1/x", journal: "J Tests" }, markdown: "Body." }
+  ])
+  assert.match(doc2, /Source: https:\/\/a\.example\/ {2}\nAuthor: Doe, Jane {2}\nPublished: 2020-01-01 {2}\nDOI: 10\.1\/x {2}\nJournal: J Tests\n\nBody\./, "provenance block")
+}
+
+// frontmatter on: the document opens with a block that tags can land in
+{
+  const doc3 = combineTabs([caps[0]], { frontmatter: true })
+  assert.match(doc3, /^---\ntitle: "Captured sources \(1\)"\ncaptured: "[^"]+"\n---\n# Captured sources \(1\)/, "frontmatter block first")
+  assert.match(applyTags(doc3, "research"), /^tags: \[research\]$/m, "tags apply to the combined doc")
+}
 
 console.log("ok: all batch checks passed")
