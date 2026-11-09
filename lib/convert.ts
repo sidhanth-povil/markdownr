@@ -2,6 +2,11 @@ import { Readability } from "@mozilla/readability"
 import TurndownService from "turndown"
 import { gfm } from "turndown-plugin-gfm"
 
+import { convertFootnotes, FOOTNOTE_DEF_ATTR, FOOTNOTE_REF_ATTR } from "./footnotes"
+import { buildFrontmatter, extractDoi, singleLineMeta, type Meta } from "./frontmatter"
+
+export { applyTags, buildFrontmatter, type Meta } from "./frontmatter"
+
 export type CaptureMode = "reader" | "full" | "selection"
 
 export interface Options {
@@ -18,14 +23,6 @@ export const DEFAULT_OPTIONS: Options = {
   links: true,
   frontmatter: true,
   absoluteUrls: true
-}
-
-export interface Meta {
-  title: string
-  url: string
-  author?: string
-  date?: string
-  description?: string
 }
 
 // Never-rendered markup. Always safe to drop.
@@ -191,6 +188,48 @@ function normalizeUrls(root: ParentNode, base: string, absolute: boolean) {
   })
 }
 
+/** Last steps on extracted HTML. Footnotes first: they match #fragment links, which absolutizing rewrites. */
+function finalizeHtml(root: ParentNode, base: string, absolute: boolean) {
+  convertFootnotes(root, base)
+  normalizeUrls(root, base, absolute)
+}
+
+const LAZY_SRC_ATTRS = ["data-src", "data-original", "data-lazy-src", "data-url", "data-lazy"]
+const LAZY_SRCSET_ATTRS = ["data-srcset", "data-lazy-srcset", "srcset"]
+const PLACEHOLDER_SRC = /^data:|(?:^|[/_-])(?:placeholder|blank|spacer|transparent|lazy|pixel)[^/]*\.(?:gif|png|svg|jpe?g|webp)(?:[?#]|$)/i
+
+function largestCandidate(srcset: string): string | undefined {
+  const candidates = srcset
+    .split(/,\s+/)
+    .map((entry) => entry.trim().split(/\s+/))
+    .filter(([url]) => url)
+    .map(([url, descriptor]) => ({ url, weight: parseFloat(descriptor) || 1 }))
+  return candidates.reduce<{ url?: string; weight: number }>((best, c) => (c.weight > best.weight ? c : best), { weight: 0 }).url
+}
+
+function firstAttr(el: Element | null | undefined, names: string[]): string | undefined {
+  for (const name of names) {
+    const value = el?.getAttribute(name)?.trim()
+    if (value) return value
+  }
+  return undefined
+}
+
+/**
+ * Lazy loaders keep the real image in a data attribute until it scrolls into view,
+ * so anything below the fold arrives as a blank pixel or no image at all. A real
+ * src is left alone: only an empty or placeholder one gets replaced.
+ */
+function resolveLazyImages(root: ParentNode) {
+  root.querySelectorAll("img").forEach((img) => {
+    const src = img.getAttribute("src")?.trim()
+    if (src && !PLACEHOLDER_SRC.test(src)) return
+    const srcset = firstAttr(img, LAZY_SRCSET_ATTRS) ?? firstAttr(img.closest("picture")?.querySelector("source"), LAZY_SRCSET_ATTRS)
+    const real = firstAttr(img, LAZY_SRC_ATTRS) ?? (srcset && largestCandidate(srcset))
+    if (real) img.setAttribute("src", real)
+  })
+}
+
 function makeTurndown(opts: Options): TurndownService {
   const td = new TurndownService({
     headingStyle: "atx",
@@ -246,6 +285,24 @@ function makeTurndown(opts: Options): TurndownService {
     }
   })
 
+  // Rules, not literal text: Turndown would escape the brackets in "[^1]". A page can
+  // set these attributes itself, and the value is written out unescaped, so only a
+  // plain number counts. Anything else would let a page inject raw Markdown.
+  const isNumericAttr = (node: HTMLElement, attr: string) => /^\d+$/.test(node.getAttribute(attr) ?? "")
+  td.addRule("footnoteReference", {
+    filter: (node) => node.nodeName === "SPAN" && isNumericAttr(node, FOOTNOTE_REF_ATTR),
+    replacement: (_content, node) => `[^${(node as unknown as Element).getAttribute(FOOTNOTE_REF_ATTR)}]`
+  })
+  td.addRule("footnoteDefinition", {
+    filter: (node) => node.nodeName === "DIV" && isNumericAttr(node, FOOTNOTE_DEF_ATTR),
+    replacement: (content, node) => {
+      const label = (node as unknown as Element).getAttribute(FOOTNOTE_DEF_ATTR)
+      // Later paragraphs must be indented or the note ends at the first blank line.
+      const body = content.trim().split("\n").map((line, i) => (i && line ? `    ${line}` : line)).join("\n")
+      return `\n\n[^${label}]: ${body}\n\n`
+    }
+  })
+
   if (!opts.images) td.addRule("dropImages", { filter: "img", replacement: () => "" })
   if (!opts.links) {
     td.addRule("unwrapLinks", { filter: "a", replacement: (content) => content })
@@ -283,9 +340,11 @@ function readJsonLd(doc: Document): { date?: string; description?: string; autho
       out.date ||= typeof node.datePublished === "string" ? node.datePublished : undefined
       out.description ||= typeof node.description === "string" ? node.description : undefined
       // author is either a string, an object with .name, or an array of either
-      const author = [node.author].flat()[0]
-      const name = typeof author === "string" ? author : author?.name
-      out.author ||= typeof name === "string" ? name : undefined
+      const names = [node.author]
+        .flat()
+        .map((author) => (typeof author === "string" ? author : author?.name))
+        .filter((name): name is string => typeof name === "string" && !!name.trim())
+      out.author ||= names.length ? names.join(" and ") : undefined
 
       if (out.date && out.description && out.author) return out
     }
@@ -302,50 +361,38 @@ function metaContent(doc: Document, selectors: string[]): string | undefined {
   return undefined
 }
 
-export function buildFrontmatter(meta: Meta): string {
-  // A YAML double-quoted scalar treats \ as an escape character, so escaping only
-  // the quotes leaves a title like 'C:\path' or one containing a real newline
-  // producing invalid YAML — which breaks every downstream parser silently.
-  // Order matters: backslashes first, or we escape the ones we just added.
-  const esc = (s: string) =>
-    `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\r/g, "").replace(/\n/g, "\\n")}"`
-  const lines = ["---", `title: ${esc(meta.title || "")}`, `url: ${esc(meta.url || "")}`]
-  if (meta.description) lines.push(`description: ${esc(meta.description)}`)
-  if (meta.author) lines.push(`author: ${esc(meta.author)}`)
-  if (meta.date) lines.push(`date: ${esc(meta.date)}`)
-  lines.push(`captured: ${esc(new Date().toISOString())}`)
-  lines.push("---", "")
-  return lines.join("\n")
+function allMetaContent(doc: Document, name: string): string[] {
+  return Array.from(doc.querySelectorAll(`meta[name='${name}']`))
+    .map((el) => el.getAttribute("content")?.trim() ?? "")
+    .filter(Boolean)
 }
 
 /**
- * Insert an Obsidian-style `tags:` line into an existing frontmatter block.
- *
- * Kept popup-side (applied to the finished markdown) rather than in the conversion
- * options on purpose: tags are a labelling choice, not an extraction one, so a
- * researcher typing tags should not re-trigger a full DOM re-extract per keystroke.
- *
- * `tagsText` is the raw comma-separated input. Tags are normalized to what Obsidian
- * accepts: no leading '#', spaces -> hyphens, only word chars / hyphen / slash
- * (slash = Obsidian nested tags). No frontmatter block (frontmatter toggle off) or
- * no valid tags -> markdown returned untouched.
+ * Every author of a paper. Journals repeat citation_author once per person, so a
+ * single lookup credits an eight-author paper to its first author alone. PubMed
+ * uses one semicolon-separated citation_authors tag instead.
  */
-export function applyTags(markdown: string, tagsText: string): string {
-  const clean = [
-    ...new Set(
-      tagsText
-        .split(",")
-        .map((t) => t.replace(/^#/, "").trim().replace(/\s+/g, "-").replace(/[^\w/-]/g, ""))
-        .filter(Boolean)
-    )
-  ]
-  if (!clean.length || !markdown.startsWith("---\n")) return markdown
-  // The frontmatter closing fence is the first "\n---" after the opening one.
-  // Values are single-line quoted scalars (newlines escaped), so a "\n---" can't
-  // appear inside them — this never matches a horizontal rule in the body.
-  const close = markdown.indexOf("\n---", 4)
-  if (close === -1) return markdown
-  return `${markdown.slice(0, close)}\ntags: [${clean.join(", ")}]${markdown.slice(close)}`
+function citationAuthors(doc: Document): string | undefined {
+  const each = allMetaContent(doc, "citation_author")
+  const list = each.length ? each : (allMetaContent(doc, "citation_authors")[0] ?? "").split(";").map((a) => a.trim()).filter(Boolean)
+  return list.length ? list.join(" and ") : undefined
+}
+
+function readCitationFields(doc: Document): Pick<Meta, "doi" | "journal" | "volume" | "issue" | "pages"> {
+  // Every tag, not the first: journals list PMID and ISSN as DC.Identifier too.
+  const doi = ["citation_doi", "prism.doi", "DC.Identifier", "DC.identifier", "dc.identifier"]
+    .flatMap((name) => allMetaContent(doc, name))
+    .map((value) => extractDoi(value))
+    .find(Boolean)
+  const firstPage = metaContent(doc, ["meta[name='citation_firstpage']"])
+  const lastPage = metaContent(doc, ["meta[name='citation_lastpage']"])
+  return {
+    doi,
+    journal: metaContent(doc, ["meta[name='citation_journal_title']", "meta[name='prism.publicationName']"]),
+    volume: metaContent(doc, ["meta[name='citation_volume']"]),
+    issue: metaContent(doc, ["meta[name='citation_issue']"]),
+    pages: firstPage && lastPage && firstPage !== lastPage ? `${firstPage}-${lastPage}` : firstPage
+  }
 }
 
 /** Pure: HTML string -> Markdown. Works in Node (Turndown ships a parser). */
@@ -369,8 +416,13 @@ function resultOrEmpty(html: string, meta: Meta, doc: Document): { html: string;
   return { html, meta }
 }
 
-/** DOM-side: pull HTML + metadata from the live page per mode. Content-script only. */
+/** DOM-side: pull HTML + metadata from the live page per mode. Page script only. */
 export function extractFromDom(opts: Options, doc: Document = document): { html: string; meta: Meta } | { error: string } {
+  const res = extractPage(opts, doc)
+  return "error" in res ? res : { ...res, meta: singleLineMeta(res.meta) }
+}
+
+function extractPage(opts: Options, doc: Document): { html: string; meta: Meta } | { error: string } {
   const base = doc.baseURI || doc.location?.href || ""
   const ld = readJsonLd(doc)
 
@@ -379,15 +431,14 @@ export function extractFromDom(opts: Options, doc: Document = document): { html:
   // "Site Name: Article" pattern. On "Jakob's Law: Why AI Products Fail" that
   // heuristic eats the actual subject of the piece.
   const ogTitle = metaContent(doc, ["meta[property='og:title']"])
-  const meta: Meta = { title: ogTitle || doc.title, url: doc.location?.href || base }
+  const meta: Meta = { title: ogTitle || doc.title, url: doc.location?.href || base, ...readCitationFields(doc) }
 
   // citation_* are the Google Scholar tags used by arXiv, PubMed and most journals.
+  // They name the paper's authors; a plain author tag on a journal can name the site.
   meta.author =
-    metaContent(doc, [
-      "meta[name='author']",
-      "meta[property='article:author']",
-      "meta[name='citation_author']"
-    ]) ?? ld.author
+    citationAuthors(doc) ??
+    metaContent(doc, ["meta[name='author']", "meta[property='article:author']"]) ??
+    ld.author
 
   // Order matters: a real published date beats JSON-LD, which beats a modified
   // date. Substack ships only modified_time as a meta tag, so without the
@@ -418,7 +469,8 @@ export function extractFromDom(opts: Options, doc: Document = document): { html:
     const div = doc.createElement("div")
     for (let i = 0; i < sel.rangeCount; i++) div.appendChild(sel.getRangeAt(i).cloneContents())
     stripJunk(div)
-    normalizeUrls(div, base, opts.absoluteUrls)
+    resolveLazyImages(div)
+    finalizeHtml(div, base, opts.absoluteUrls)
     return resultOrEmpty(div.innerHTML, meta, doc)
   }
 
@@ -427,6 +479,7 @@ export function extractFromDom(opts: Options, doc: Document = document): { html:
   // Must run before stripJunk, while clone and live tree still line up 1:1.
   dropHiddenContent(doc, clone)
   stripJunk(clone)
+  resolveLazyImages(clone)
 
   if (opts.mode === "reader") {
     // Readability throws on malformed/stripped documents. Never fail the whole
@@ -436,6 +489,13 @@ export function extractFromDom(opts: Options, doc: Document = document): { html:
     let article: ReturnType<Readability["parse"]> = null
     try {
       const rdDoc = clone.cloneNode(true) as Document
+      // Same hyphen trap one level up: Wikipedia wraps each heading in
+      // div.mw-heading, and Readability deletes the wrapper with the heading inside.
+      rdDoc.querySelectorAll(".mw-editsection").forEach((el) => el.remove())
+      rdDoc.querySelectorAll("div > h1,div > h2,div > h3,div > h4,div > h5,div > h6").forEach((h) => {
+        const wrapper = h.parentElement!
+        if (wrapper.children.length === 1 && wrapper.textContent?.trim() === h.textContent?.trim()) wrapper.replaceWith(h)
+      })
       // Readability culls H1/H2 whose class/id scores negative, and its NEGATIVE regex
       // begins with a literal "-" — so ANY hyphenated class (Substack's
       // "header-anchor-post") deletes the heading. Blank the attributes on this
@@ -479,13 +539,13 @@ export function extractFromDom(opts: Options, doc: Document = document): { html:
       if (!meta.author && plausible) meta.author = byline
       const wrap = clone.createElement("div")
       wrap.innerHTML = article.content
-      normalizeUrls(wrap, base, opts.absoluteUrls)
+      finalizeHtml(wrap, base, opts.absoluteUrls)
       return { html: wrap.innerHTML, meta }
     }
     // fall through to full-page
   }
 
   const bodyClone = clone.body || clone.documentElement
-  normalizeUrls(bodyClone, base, opts.absoluteUrls)
+  finalizeHtml(bodyClone, base, opts.absoluteUrls)
   return resultOrEmpty(bodyClone.innerHTML, meta, doc)
 }

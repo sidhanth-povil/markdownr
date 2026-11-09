@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react"
 
-import { applyTags, DEFAULT_OPTIONS, type CaptureMode, type Meta, type Options } from "~lib/convert"
-import { toBibTeX, toRIS } from "~lib/cite"
 import { combineTabs, type TabCapture } from "~lib/batch"
+import { toBibliography, toBibTeX, toRIS } from "~lib/cite"
+import { DEFAULT_OPTIONS, type CaptureMode, type Options } from "~lib/convert"
+import { finishMarkdown, vaultFilename, type Meta } from "~lib/frontmatter"
+import { convertInTab } from "~lib/page"
+import { Action, asPrompt, downloadText, TextAction, Toggle, useCopy } from "~lib/ui"
 
 import "./style.css"
 
@@ -12,36 +15,61 @@ const MODES: { id: CaptureMode; label: string; hint: string }[] = [
   { id: "selection", label: "Selection", hint: "Only highlighted text" }
 ]
 
-function slug(s: string) {
-  return (s || "page").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "page"
+const ALL_SITES = "<all_urls>"
+const OPEN_COMMAND = "_execute_action"
+const STATUS_CLEAR_MS = 3000
+const MAX_SKIPPED_NAMES = 3
+const MAX_TEMPLATE_CHARS = 2000
+const TEMPLATE_PLACEHOLDER = "status: to-read\nsource: {{domain}}"
+
+type BatchDelivery = "copy" | "download" | "bib"
+
+const openPdfConverter = () => chrome.tabs.create({ url: chrome.runtime.getURL("tabs/pdf.html") })
+const openShortcutSettings = () => chrome.tabs.create({ url: "chrome://extensions/shortcuts" })
+
+function skippedSummary(names: string[]): string {
+  if (!names.length) return ""
+  const shown = names.slice(0, MAX_SKIPPED_NAMES).join(", ")
+  const more = names.length > MAX_SKIPPED_NAMES ? ` +${names.length - MAX_SKIPPED_NAMES} more` : ""
+  return `, ${names.length} skipped: ${shown}${more}`
 }
 
 export default function Popup() {
   const [options, setOptions] = useState<Options>(DEFAULT_OPTIONS)
   const [markdown, setMarkdown] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [isPdfTab, setIsPdfTab] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [copied, setCopied] = useState<string | null>(null)
-  const [title, setTitle] = useState("page")
+  const [tabTitle, setTabTitle] = useState("page")
   const [meta, setMeta] = useState<Meta | null>(null)
   const [tagsText, setTagsText] = useState("")
+  const [template, setTemplate] = useState("")
   const [batchStatus, setBatchStatus] = useState<string | null>(null)
   const [batching, setBatching] = useState(false)
   const [hydrated, setHydrated] = useState(false)
+  const [shortcut, setShortcut] = useState("")
+  const { copied, copy } = useCopy(setError)
 
-  // load saved options + tags once
+  // Blank when Chrome couldn't register it, e.g. another extension already holds the
+  // keys, so the hint must come from Chrome rather than from what the manifest suggests.
   useEffect(() => {
-    chrome.storage.sync.get(["options", "tags"]).then(({ options: saved, tags }) => {
+    chrome.commands.getAll().then((commands) => setShortcut(commands.find((c) => c.name === OPEN_COMMAND)?.shortcut ?? ""))
+  }, [])
+
+  // load saved settings once
+  useEffect(() => {
+    chrome.storage.sync.get(["options", "tags", "template"]).then(({ options: saved, tags, template: savedTemplate }) => {
       if (saved) setOptions((o) => ({ ...o, ...saved }))
       if (typeof tags === "string") setTagsText(tags)
+      if (typeof savedTemplate === "string") setTemplate(savedTemplate)
       setHydrated(true)
     })
   }, [])
 
-  // persist tags separately — they don't trigger a reconvert (see applyTags)
+  // persist these separately — they don't trigger a reconvert (see finishMarkdown)
   useEffect(() => {
-    if (hydrated) chrome.storage.sync.set({ tags: tagsText })
-  }, [tagsText, hydrated])
+    if (hydrated) chrome.storage.sync.set({ tags: tagsText, template })
+  }, [tagsText, template, hydrated])
 
   // run conversion whenever options change
   useEffect(() => {
@@ -51,30 +79,32 @@ export default function Popup() {
     let alive = true
     setLoading(true)
     setError(null)
+    setIsPdfTab(false)
     chrome.storage.sync.set({ options })
-    chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+    chrome.tabs.query({ active: true, currentWindow: true }).then(async ([tab]) => {
       if (!tab?.id) {
+        if (!alive) return
         // returning here used to leave the popup stuck on "Converting…" forever
         setLoading(false)
         setError("No active tab.")
         return
       }
-      setTitle(slug(tab.title || "page"))
-      chrome.tabs.sendMessage(tab.id, { type: "CONVERT", options }, (res) => {
-        if (!alive) return
-        setLoading(false)
-        if (chrome.runtime.lastError || !res) {
-          setError("Can't run on this page. Try a normal website tab (not chrome:// or the Web Store).")
-          setMarkdown("")
-        } else if (res.ok) {
-          setMarkdown(res.markdown)
-          setMeta(res.meta)
-        } else {
-          setError(res.error)
-          setMarkdown("")
-          setMeta(null)
-        }
-      })
+      setTabTitle(tab.title || "page")
+      const res = await convertInTab(tab.id, options)
+      if (!alive) return
+      setLoading(false)
+      if (!res) {
+        setError("Can't run on this page. Try a normal website tab (not chrome:// or the Web Store).")
+        setMarkdown("")
+      } else if (res.ok === true) {
+        setMarkdown(res.markdown)
+        setMeta(res.meta)
+      } else {
+        setError(res.error)
+        setIsPdfTab(!!res.isPdf)
+        setMarkdown("")
+        setMeta(null)
+      }
     })
     return () => {
       alive = false
@@ -83,79 +113,60 @@ export default function Popup() {
 
   const set = <K extends keyof Options>(k: K, v: Options[K]) => setOptions((o) => ({ ...o, [k]: v }))
 
-  const flash = (label: string) => {
-    setCopied(label)
-    setTimeout(() => setCopied(null), 1200)
-  }
+  // What actually gets shown/exported: the markdown with the user's tags and fields
+  // folded into the frontmatter. Recomputed locally on edits — no reconvert.
+  const output = meta ? finishMarkdown(markdown, tagsText, template, meta) : markdown
 
-  const copy = async (text: string, label: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      flash(label)
-    } catch {
-      setError("Copy blocked. Select the text below and copy manually.")
+  const deliverBatch = async (caps: TabCapture[], delivery: BatchDelivery): Promise<boolean> => {
+    const date = new Date().toISOString().slice(0, 10)
+    if (delivery === "bib") {
+      downloadText(toBibliography(caps.map((c) => c.meta)), `sources-${date}.bib`, "application/x-bibtex")
+      return true
     }
-  }
-
-  // What actually gets shown/exported: the markdown with the user's tags folded
-  // into the frontmatter. Recomputed locally on tag edits — no reconvert.
-  const output = applyTags(markdown, tagsText)
-
-  const downloadText = (text: string, filename: string) => {
-    const url = URL.createObjectURL(new Blob([text], { type: "text/markdown" }))
-    const a = document.createElement("a")
-    a.href = url
-    a.download = filename
-    a.click()
-    // revoking synchronously can cancel the download before it starts
-    setTimeout(() => URL.revokeObjectURL(url), 10_000)
-  }
-
-  const download = () => downloadText(output, `${title}.md`)
-
-  // Ask one tab's content script to convert. Resolves null on any failure
-  // (chrome:// page, Web Store, no content script) so batch capture skips it.
-  const convertTab = (tabId: number, opts: Options): Promise<{ markdown: string; meta: Meta } | null> =>
-    new Promise((resolve) => {
-      chrome.tabs.sendMessage(tabId, { type: "CONVERT", options: opts }, (res) => {
-        if (chrome.runtime.lastError || !res?.ok) resolve(null)
-        else resolve({ markdown: res.markdown, meta: res.meta })
-      })
+    const doc = finishMarkdown(combineTabs(caps, { frontmatter: options.frontmatter }), tagsText, template, {
+      title: "Captured sources",
+      url: ""
     })
+    if (delivery === "copy") return copy(doc, "batch")
+    downloadText(doc, `sources-${date}.md`)
+    return true
+  }
 
-  // C1 — capture every tab in this window into one research doc. No new permission:
-  // tab IDs come from tabs.query (no gating), and messaging works via the host access
-  // the content script already holds. Body-only (frontmatter off) — combineTabs adds
-  // a per-source header instead. Tags apply to the combined doc if set.
-  const captureAllTabs = async (deliver: "copy" | "download") => {
-    setBatching(true)
-    setBatchStatus("Capturing all tabs…")
-    setError(null)
-    const tabs = await chrome.tabs.query({ currentWindow: true })
-    const opts: Options = { ...options, frontmatter: false }
-    const results = await Promise.all(tabs.map((t) => (t.id ? convertTab(t.id, opts) : Promise.resolve(null))))
-    const caps = results.filter((r): r is TabCapture => !!r)
-    const skipped = tabs.length - caps.length
-    setBatching(false)
-    if (!caps.length) {
-      setBatchStatus(null)
-      setError("No tabs could be captured. chrome:// and Web Store pages can't be read.")
+  // Capture every tab in this window into one research doc. Site access is requested
+  // here, on the click, because Chrome only allows that during a user gesture.
+  const captureAllTabs = async (delivery: BatchDelivery) => {
+    // Problems here go in the status line. setError would blank this tab's preview.
+    setBatchStatus(null)
+    const granted = await chrome.permissions.request({ origins: [ALL_SITES] }).catch(() => false)
+    if (!granted) {
+      setBatchStatus("All tabs needs access to your open sites. Nothing was captured.")
       return
     }
-    // combined doc uses per-source headings, not a frontmatter block, so tags
-    // (which live in frontmatter) don't apply here by design.
-    const doc = combineTabs(caps)
-    if (deliver === "copy") await navigator.clipboard.writeText(doc).catch(() => {})
-    else downloadText(doc, `sources-${new Date().toISOString().slice(0, 10)}.md`)
-    setBatchStatus(`${caps.length} captured${skipped ? `, ${skipped} skipped` : ""}`)
-    setTimeout(() => setBatchStatus(null), 3000)
+    setBatching(true)
+    setBatchStatus("Capturing all tabs…")
+    try {
+      const tabs = await chrome.tabs.query({ currentWindow: true })
+      // Body-only (frontmatter off): combineTabs adds per-source details instead.
+      const results = await Promise.all(tabs.map((t) => (t.id ? convertInTab(t.id, { ...options, frontmatter: false }) : null)))
+      const caps = results.flatMap((r): TabCapture[] => (r?.ok === true ? [{ markdown: r.markdown, meta: r.meta }] : []))
+      if (!caps.length) {
+        setBatchStatus("No tabs could be captured. chrome:// and Web Store pages can't be read.")
+        return
+      }
+      if (!(await deliverBatch(caps, delivery))) {
+        setBatchStatus(null)
+        return
+      }
+      const skipped = tabs.filter((_, i) => !results[i]?.ok).map((t) => t.title || t.url || "browser page")
+      setBatchStatus(`${caps.length} captured${skippedSummary(skipped)}`)
+      // Names of skipped tabs stay up: they're what the user has to go and fix.
+      if (!skipped.length) setTimeout(() => setBatchStatus(null), STATUS_CLEAR_MS)
+    } catch {
+      setBatchStatus("Capture failed. Try again.")
+    } finally {
+      setBatching(false)
+    }
   }
-
-  const asPrompt = () =>
-    copy(
-      `Below is the content of a web page in Markdown. Read it, then help me with it.\n\n---\n\n${output}`,
-      "prompt"
-    )
 
   const canExport = !!markdown && !error
 
@@ -171,7 +182,9 @@ export default function Popup() {
           </svg>
           <span className="font-semibold">Markdownr</span>
         </div>
-        <span className="text-xs text-gray-400">Alt+M</span>
+        <span className="text-xs text-gray-400">
+          {shortcut || <TextAction onClick={openShortcutSettings}>Set shortcut</TextAction>}
+        </span>
       </div>
 
       {/* mode tabs */}
@@ -212,6 +225,22 @@ export default function Popup() {
           aria-label="Frontmatter tags, comma-separated"
           className="w-full rounded-md border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs text-gray-800 outline-none placeholder:text-gray-400 focus:border-[#fb411f] disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
         />
+        <details className="pt-2 text-xs text-gray-500 dark:text-neutral-400">
+          <summary className="cursor-pointer select-none">Custom frontmatter fields</summary>
+          <textarea
+            value={template}
+            onChange={(e) => setTemplate(e.target.value)}
+            disabled={!options.frontmatter}
+            maxLength={MAX_TEMPLATE_CHARS}
+            rows={3}
+            placeholder={TEMPLATE_PLACEHOLDER}
+            aria-label="Custom frontmatter fields, one key and value per line"
+            className="mt-1 w-full resize-y rounded-md border border-gray-200 bg-gray-50 p-2 font-mono text-xs text-gray-800 outline-none placeholder:text-gray-400 focus:border-[#fb411f] disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
+          />
+          <p>
+            One <code>key: value</code> per line. Fill-ins: {"{{title}} {{url}} {{domain}} {{author}} {{date}} {{doi}} {{journal}} {{captured}}"}
+          </p>
+        </details>
       </div>
 
       {/* preview */}
@@ -224,7 +253,10 @@ export default function Popup() {
           className="h-56 w-full resize-none rounded-md border border-gray-200 bg-gray-50 p-2 font-mono text-xs leading-relaxed text-gray-800 outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
         />
         {error ? (
-          <p className="pt-1 text-xs text-red-500">{error}</p>
+          <p className="pt-1 text-xs text-red-500">
+            {error}{" "}
+            {isPdfTab && <TextAction onClick={openPdfConverter}>Open PDF converter</TextAction>}
+          </p>
         ) : (
           canExport && (
             // ~chars/4 is the standard rough token estimate — enough to answer
@@ -241,10 +273,10 @@ export default function Popup() {
         <Action disabled={!canExport} onClick={() => copy(output, "copy")} primary>
           {copied === "copy" ? "Copied ✓" : "Copy"}
         </Action>
-        <Action disabled={!canExport} onClick={download}>
+        <Action disabled={!canExport} onClick={() => downloadText(output, `${vaultFilename(meta?.title || tabTitle)}.md`)}>
           Download
         </Action>
-        <Action disabled={!canExport} onClick={asPrompt}>
+        <Action disabled={!canExport} onClick={() => copy(asPrompt(output), "prompt")}>
           {copied === "prompt" ? "Copied ✓" : "As prompt"}
         </Action>
       </div>
@@ -252,76 +284,31 @@ export default function Popup() {
       {/* citation row — the researcher's payoff: paste straight into a reference manager */}
       <div className="flex items-center gap-3 px-4 pb-4 text-xs text-gray-500 dark:text-neutral-400">
         <span>Cite:</span>
-        <button
-          type="button"
-          disabled={!canExport || !meta}
-          onClick={() => meta && copy(toBibTeX(meta), "bibtex")}
-          className="underline underline-offset-2 hover:text-[#fb411f] disabled:cursor-not-allowed disabled:opacity-40 disabled:no-underline">
+        <TextAction disabled={!canExport || !meta} onClick={() => meta && copy(toBibTeX(meta), "bibtex")}>
           {copied === "bibtex" ? "Copied ✓" : "BibTeX"}
-        </button>
-        <button
-          type="button"
-          disabled={!canExport || !meta}
-          onClick={() => meta && copy(toRIS(meta), "ris")}
-          className="underline underline-offset-2 hover:text-[#fb411f] disabled:cursor-not-allowed disabled:opacity-40 disabled:no-underline">
+        </TextAction>
+        <TextAction disabled={!canExport || !meta} onClick={() => meta && copy(toRIS(meta), "ris")}>
           {copied === "ris" ? "Copied ✓" : "RIS"}
-        </button>
+        </TextAction>
+        <span className="ml-auto">
+          <TextAction onClick={openPdfConverter}>Convert a PDF</TextAction>
+        </span>
       </div>
 
       {/* multi-tab batch — capture the whole research session into one file */}
-      <div className="flex items-center gap-3 border-t border-gray-100 px-4 py-3 text-xs text-gray-500 dark:border-neutral-800 dark:text-neutral-400">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-gray-100 px-4 py-3 text-xs text-gray-500 dark:border-neutral-800 dark:text-neutral-400">
         <span>All tabs:</span>
-        <button
-          type="button"
-          disabled={batching}
-          onClick={() => captureAllTabs("copy")}
-          className="underline underline-offset-2 hover:text-[#fb411f] disabled:cursor-not-allowed disabled:opacity-40">
-          Copy
-        </button>
-        <button
-          type="button"
-          disabled={batching}
-          onClick={() => captureAllTabs("download")}
-          className="underline underline-offset-2 hover:text-[#fb411f] disabled:cursor-not-allowed disabled:opacity-40">
+        <TextAction disabled={batching} onClick={() => captureAllTabs("copy")}>
+          {copied === "batch" ? "Copied ✓" : "Copy"}
+        </TextAction>
+        <TextAction disabled={batching} onClick={() => captureAllTabs("download")}>
           Download
-        </button>
-        {batchStatus && <span className="text-gray-400 dark:text-neutral-500">{batchStatus}</span>}
+        </TextAction>
+        <TextAction disabled={batching} onClick={() => captureAllTabs("bib")}>
+          .bib
+        </TextAction>
+        {batchStatus && <span className="basis-full text-gray-400 dark:text-neutral-500">{batchStatus}</span>}
       </div>
     </div>
-  )
-}
-
-function Toggle({ label, v, on }: { label: string; v: boolean; on: (v: boolean) => void }) {
-  return (
-    <label className="flex cursor-pointer items-center gap-1.5 select-none">
-      <input type="checkbox" checked={v} onChange={(e) => on(e.target.checked)} className="accent-[#fb411f]" />
-      <span>{label}</span>
-    </label>
-  )
-}
-
-function Action({
-  children,
-  onClick,
-  disabled,
-  primary
-}: {
-  children: React.ReactNode
-  onClick: () => void
-  disabled?: boolean
-  primary?: boolean
-}) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className={`rounded-md px-2 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-40 ${
-        primary
-          ? "bg-[#fb411f] text-white hover:bg-[#e23c1c]"
-          : "bg-gray-100 text-gray-800 hover:bg-gray-200 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700"
-      }`}>
-      {children}
-    </button>
   )
 }

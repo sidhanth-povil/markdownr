@@ -1,7 +1,7 @@
 {
   "name": "markdownr",
   "displayName": "Markdownr — Page to Markdown",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Turn any webpage into clean, LLM-ready Markdown in one click. Reader, full-page, or selection.",
   "author": "Markdownr contributors",
   "license": "MIT",
@@ -9,10 +9,11 @@
     "dev": "plasmo dev",
     "build": "plasmo build",
     "package": "plasmo package",
-    "test": "tsx lib/convert.test.ts && tsx lib/extract.test.ts && tsx lib/cite.test.ts && tsx lib/batch.test.ts && tsx lib/privacy.test.ts"
+    "test": "tsx lib/convert.test.ts && tsx lib/extract.test.ts && tsx lib/capture.test.ts && tsx lib/metadata.test.ts && tsx lib/frontmatter.test.ts && tsx lib/cite.test.ts && tsx lib/batch.test.ts && tsx lib/pdf.test.ts && tsx lib/privacy.test.ts"
   },
   "dependencies": {
     "@mozilla/readability": "0.5.0",
+    "pdfjs-dist": "4.10.38",
     "plasmo": "0.90.5",
     "react": "18.2.0",
     "react-dom": "18.2.0",
@@ -39,12 +40,17 @@
       "contextMenus",
       "storage",
       "notifications",
-      "activeTab"
+      "activeTab",
+      "scripting"
+    ],
+    "optional_host_permissions": [
+      "<all_urls>"
     ],
     "commands": {
       "_execute_action": {
         "suggested_key": {
-          "default": "Alt+M"
+          "default": "Alt+M",
+          "mac": "MacCtrl+Shift+M"
         },
         "description": "Open Markdownr"
       }
